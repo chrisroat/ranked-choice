@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Spreadsheet Tabulate{% endblock %}
+
+{% block content %}
+
+<div class="mb-3">
+    <h3>Results:</h3>
+    <pre>{{ final_results }}</pre>
+</div>
+
+<div>
+    <h3>Vote Flow:</h3>
+    <div id="fig" class="chart"></div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script type="text/javascript">
+    var graphs = {{ fig_json | safe }};
+    Plotly.plot('fig', graphs, {});        
+</script>
+{% endblock %}

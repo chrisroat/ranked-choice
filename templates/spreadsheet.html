@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}Spreadsheets{% endblock %}
+
+{% block content %}
+<form method="POST">
+    <div class="mb-3">
+        <label for="spreadsheet" class="form-label">Select spreadsheet:</label>
+        <select name="spreadsheet_id" id="spreadsheet" class="selectpicker" data-live-search="true">
+            {% for name, id in spreadsheets %}
+            <option value="{{ id }}">{{ name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+{% endblock %}

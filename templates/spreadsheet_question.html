@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}Spreadsheet Questions{% endblock %}
+
+{% block content %}
+<form method="POST">
+    <div class="mb-3">
+        <label for="spreadsheet_question" class="form-label">Select question:</label>
+        <select name="spreadsheet_question" id="spreadsheet_question" class="selectpicker" data-live-search="true">
+            {% for question in questions %}
+            <option value="{{ question }}">{{ question }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+{% endblock %}
