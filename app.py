@@ -4,18 +4,23 @@ import re
 from functools import wraps
 
 import numpy as np
+import pandas as pd
+import plotly.express as px  # Needs pandas
 import plotly.graph_objects as go
 import plotly.utils
 import pyrankvote as prv
 from flask import Flask, redirect, render_template, request, session, url_for
+from flask.helpers import send_from_directory
+from flask_breadcrumbs import Breadcrumbs, register_breadcrumb
 from flask_dance.consumer import oauth_authorized
 from flask_dance.contrib.google import google, make_google_blueprint
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from oauthlib.oauth2 import TokenExpiredError
 
+import sankey_lib
+
 QUESTION_PATTERN = re.compile("(?P<question>.*) \[(?P<option>.*)\]")
-BLANK_CANDIDATE = None
 
 SCOPES = [
     "https://www.googleapis.com/auth/userinfo.email",
@@ -24,6 +29,7 @@ SCOPES = [
 ]
 
 app = Flask(__name__)
+Breadcrumbs(app)
 app.secret_key = os.environ["FLASK_SECRET_KEY"]
 blueprint = make_google_blueprint(
     client_id=os.environ["GOOGLE_OAUTH_CLIENT_ID"],
@@ -52,6 +58,8 @@ def login_required(f):
             return redirect(url_for("google.login"))
         try:
             resp = google.get("/oauth2/v1/userinfo")
+            email = resp.json()["email"]
+            print(f"Login email: {email}")
             assert resp.ok, resp.text
         except TokenExpiredError:
             session["next_url"] = url_for(request.endpoint, **request.view_args)
@@ -61,7 +69,31 @@ def login_required(f):
     return wrap
 
 
+@app.route("/static/<path:path>")
+def send_static(path):
+    return send_from_directory("static", path)
+
+
+@app.route("/", methods=["GET"])
+@register_breadcrumb(app, ".", "Home")
+def index():
+    return render_template("index.html")
+
+
+@app.route("/terms_and_conditions", methods=["GET"])
+@register_breadcrumb(app, ".terms_and_conditions", "Terms And Conditions")
+def terms_and_conditions():
+    return render_template("terms_and_conditions.html")
+
+
+@app.route("/privacy", methods=["GET"])
+@register_breadcrumb(app, ".privacy", "Privacy Policy")
+def privacy():
+    return render_template("privacy.html")
+
+
 @app.route("/spreadsheet", methods=["GET", "POST"])
+@register_breadcrumb(app, ".spreadsheet", "Analyze Spreadsheet")
 @login_required
 def spreadsheet():
     if request.method == "POST":
@@ -95,7 +127,17 @@ def spreadsheet():
     return render_template("spreadsheet.html", spreadsheets=spreadsheets)
 
 
+def ssq(*args, **kwargs):
+    spreadsheet_id = request.view_args["spreadsheet_id"]
+    service = build("sheets", "v4", credentials=make_credentials())
+    spreadsheet = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+    title = get_spreadsheet_title(spreadsheet)
+    url = url_for("spreadsheet_question", spreadsheet_id=spreadsheet_id)
+    return [{"text": title, "url": url}]
+
+
 @app.route("/spreadsheet/<string:spreadsheet_id>/question", methods=["GET", "POST"])
+@register_breadcrumb(app, ".spreadsheet.question", "", dynamic_list_constructor=ssq)
 @login_required
 def spreadsheet_question(spreadsheet_id):
     if request.method == "POST":
@@ -133,8 +175,18 @@ def spreadsheet_question(spreadsheet_id):
     return render_template("spreadsheet_question.html", questions=questions)
 
 
-@app.route(
-    "/spreadsheet/<string:spreadsheet_id>/tablulate/<string:question>", methods=["GET"]
+def ssqt(*args, **kwargs):
+    spreadsheet_id = request.view_args["spreadsheet_id"]
+    question = request.view_args["question"]
+    url = url_for(
+        "spreadsheet_tabulate", spreadsheet_id=spreadsheet_id, question=question
+    )
+    return [{"text": question, "url": url}]
+
+
+@app.route("/spreadsheet/<string:spreadsheet_id>/<string:question>", methods=["GET"])
+@register_breadcrumb(
+    app, ".spreadsheet.question.tabulate", "", dynamic_list_constructor=ssqt
 )
 @login_required
 def spreadsheet_tabulate(spreadsheet_id, question):
@@ -172,56 +224,78 @@ def spreadsheet_tabulate(spreadsheet_id, question):
     ballots = [make_ballot(row, candidates) for row in data]
     results = prv.single_transferable_vote(candidates, ballots, number_of_seats=1)
 
-    # From here onward, include a candidate representing blank/exhausted ballots.
-    candidates.append(BLANK_CANDIDATE)
-
-    source = []
-    target = []
-    value = []
-
-    for rnd, rnd_result in enumerate(results.rounds[:-1]):
-        counts = {r.candidate: r.number_of_votes for r in rnd_result.candidate_results}
-        counts[BLANK_CANDIDATE] = rnd_result.number_of_blank_votes
-
-        src_offset = rnd * len(candidates)
-        tgt_offset = (rnd + 1) * len(candidates)
-        for src_idx, src in enumerate(candidates, start=src_offset):
-            transfers = rnd_result.transfers.get(src)
-            if transfers:
-                for tgt_idx, tgt in enumerate(candidates, start=tgt_offset):
-                    if tgt in transfers:
-                        source.append(src_idx)
-                        target.append(tgt_idx)
-                        value.append(transfers[tgt])
-            else:
-                source.append(src_idx)
-                target.append(src_idx + len(candidates))
-                value.append(counts[src])
-
-    def name(c):
-        return "-exhausted-" if c is BLANK_CANDIDATE else c.name
-
-    labels = [name(c) for c in candidates] * len(results.rounds)
+    sankey_data = sankey_lib.results_to_sankey(
+        results,
+        candidates,
+        node_palette=px.colors.qualitative.Dark2,
+        link_palette=px.colors.qualitative.Set2,
+    )
 
     sankey = go.Sankey(
         node=dict(
-            pad=15,
-            thickness=20,
-            line=dict(color="black", width=0.5),
-            label=labels,
-            color="blue",
+            thickness=10,
+            line=dict(color="black", width=1),
+            label=sankey_data.labels,
+            color=sankey_data.node_color,
         ),
-        link=dict(source=source, target=target, value=value),
+        link=dict(
+            source=sankey_data.source,
+            target=sankey_data.target,
+            value=sankey_data.value,
+            color=sankey_data.link_color,
+        ),
+        visible=True,
     )
+
+    results_by_round = []
+    for rnd in results.rounds:
+        counts = {r.candidate.name: r.number_of_votes for r in rnd.candidate_results}
+        counts["-exhausted-"] = rnd.number_of_blank_votes
+        results_by_round.append(counts)
+    results_by_round = pd.DataFrame(results_by_round)
+    results_by_round.index += 1
+    results_by_round.index.name = "Round"
+
+    spreadsheet_title = get_spreadsheet_title(spreadsheet)
+    title_text = f"{spreadsheet_title}<br><sup>{question}</sup>"
 
     fig = go.Figure(data=[sankey])
-    fig.update_layout(font_size=25)
+    notes = [
+        "Height of bars and traces is proportional to vote count.",
+        "The '-exhausted-' label is legitimate and indicates ballots which chose not to rank all candidates.",
+    ]
+    fig.add_annotation(
+        x=0,
+        y=-0.2,
+        xref="paper",
+        yref="paper",
+        text="<br>".join(notes),
+        align="left",
+        showarrow=False,
+        font_size=15,
+    )
+    fig.update_layout(
+        title_text=title_text,
+        font_size=20,
+        xaxis={"showgrid": False, "zeroline": False, "visible": False},
+        yaxis={"showgrid": False, "zeroline": False, "visible": False},
+    )
     fig_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
 
-    final_results = results.rounds[-1]
     return render_template(
-        "spreadsheet_tabulate.html", fig_json=fig_json, final_results=final_results
+        "spreadsheet_tabulate.html",
+        fig_json=fig_json,
+        results=results,
+        results_by_round=results_by_round,
     )
+
+
+def get_spreadsheet_title(spreadsheet):
+    title = spreadsheet["properties"]["title"]
+    end = " (Responses)"
+    if title.endswith(end):
+        title = title[: -len(end)]
+    return title
 
 
 def clean_ord(o):
@@ -265,7 +339,7 @@ def validate_spreadsheet(sheet_service, spreadsheet_id):
 @app.route("/logout")
 def logout():
     if blueprint.token is None:
-        return "Logged Out"
+        return redirect(url_for("index"))
 
     token = blueprint.token["access_token"]
 
@@ -280,4 +354,4 @@ def logout():
         pass
 
     del blueprint.token
-    return "Logged Out"
+    return redirect(url_for("index"))

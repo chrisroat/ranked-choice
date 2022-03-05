@@ -5,14 +5,18 @@
 {% block content %}
 <form method="POST">
     <div class="mb-3">
-        <label for="spreadsheet_question" class="form-label">Select question:</label>
-        <select name="spreadsheet_question" id="spreadsheet_question" class="selectpicker" data-live-search="true">
+        <label for="spreadsheet_question" class="form-label">Question:</label>
+        <select name="spreadsheet_question" id="spreadsheet_question" class="selectpicker" data-size="5.5"
+            data-width="fit" data-live-search="true">
+
+            <option value="" selected disabled>Select a RCV question...</option>
+
             {% for question in questions %}
             <option value="{{ question }}">{{ question }}</option>
             {% endfor %}
         </select>
     </div>
 
-    <button type="submit" class="btn btn-primary">Submit</button>
+    <button type="submit" class="btn btn-primary">Run!</button>
 </form>
 {% endblock %}

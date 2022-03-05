@@ -1,18 +1,22 @@
 {% extends 'base.html' %}
 
-{% block title %}Spreadsheet Tabulate{% endblock %}
+{% block title %}Results{% endblock %}
 
 {% block content %}
 
 <div class="mb-3">
-    <h3>Results:</h3>
-    <pre>{{ final_results }}</pre>
+    <pre>{{ results.rounds[-1] }}</pre>
 </div>
 
-<div>
-    <h3>Vote Flow:</h3>
+<div class="mb-3">
     <div id="fig" class="chart"></div>
 </div>
+
+<div class="mb-3">
+    <h3>Results By Round</h3>
+    <pre>{{ results_by_round }}</pre>
+</div>
+
 
 {% endblock %}
 

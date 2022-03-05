@@ -12,7 +12,9 @@ pyrankvote = {editable = true, ref = "eb52bb35a4031d24fa8329c19cfe45f737e2aadf",
 google-api-python-client = "*"
 google-auth = "*"
 numpy = "*"
+pandas = "*"
 blinker = "*"
+flask-breadcrumbs = "*"
 
 [dev-packages]
 rope = "*"

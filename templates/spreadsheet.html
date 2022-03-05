@@ -5,14 +5,18 @@
 {% block content %}
 <form method="POST">
     <div class="mb-3">
-        <label for="spreadsheet" class="form-label">Select spreadsheet:</label>
-        <select name="spreadsheet_id" id="spreadsheet" class="selectpicker" data-live-search="true">
+        <label for="spreadsheet" class="form-label">Spreadsheet:</label>
+        <select name="spreadsheet_id" id="spreadsheet" class="selectpicker" data-size="5.5" data-width="fit"
+            data-live-search="true">
+
+            <option value="" selected disabled>Select a spreadsheet...</option>
+
             {% for name, id in spreadsheets %}
             <option value="{{ id }}">{{ name }}</option>
             {% endfor %}
         </select>
     </div>
 
-    <button type="submit" class="btn btn-primary">Submit</button>
+    <button type="submit" class="btn btn-primary">Next</button>
 </form>
 {% endblock %}
