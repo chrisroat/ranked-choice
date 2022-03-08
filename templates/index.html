@@ -1,9 +1,50 @@
 {% extends 'base.html' %}
 
-{% block title %}Main{% endblock %}
+{% block title %}RCV Tabulator{% endblock %}
 
 {% block content %}
 
-<a href="{{ url_for('spreadsheet') }}">Analyze RCV Question from Google Spreadsheet</a>
+<p>
+    Use RCV Tabulator to run a ranked choice election to determine the winner, understand
+    round-by-round vote counts, and visualize the vote flow in a Sankey diagram.
+</p>
+
+<p>
+    To get started, use a <a href="https://docs.google.com/forms">Google Form</a> to run your election.
+    For each ranked-choice race, create a question using the following settings.
+</p>
+
+<ul>
+    <li>Select the "Multiple Choice Grid" question type</li>
+    <li>Label the rows with each candidate's name</li>
+    <li>Label the columns "1st", "2nd", "3rd", ... [up to the number of rankings you allow]</li>
+    <li>Turn on the "Limit one response per column" setting.</li>
+    <li>Do NOT use the "Require a response in each row" setting, unless it is something you
+        *really* want. In most cases, it is acceptable to allow voters not to rank all
+        candidates.</li>
+    <li>We recommend using the "Shuffle row order" to remove any bias toward candidates
+        listed near the start of the order.</li>
+</ul>
+
+<p>
+    Once voting is complete for your entire election, go to the "Responses" tab and select the
+    "Create Spreadsheet" icon (green square with stripes). It should have the name
+    "<strong>Your Form's Name</strong> (Responses)".
+</p>
+
+<p>
+    Then use one of the following methods to create your results:
+</p>
+
+<ul>
+    <li>
+        Download the Google Sheet as a csv file, and then
+        <a href="{{ url_for('upload') }}">upload to analyze.</a>
+    </li>
+    <li>
+        Directly <a href="{{ url_for('spreadsheet') }}">analyze a Google Sheet</a>, but
+        giving the website permission to access your Google Drive.
+    </li>
+</ul>
 
 {% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Analyze Upload{% endblock %}
+
+{% block content %}
+
+<form method="post" enctype="multipart/form-data" action="{{ action }}">
+    <div class="mb-3">
+        {{ form.hidden_tag() }}
+        {{ form.results_csv }}
+    </div>
+    <button type="submit" class="btn btn-primary">Next</button>
+</form>
+
+{% endblock %}

@@ -29,13 +29,16 @@
                 <div class="flex-column">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('spreadsheet') }}">Analyze Spreadsheet</a>
+                            <a class="nav-link" href="{{ url_for('upload') }}">Analyze Upload</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('terms_and_conditions') }}">Terms and Conditions</a>
+                            <a class="nav-link" href="{{ url_for('spreadsheet') }}">Analyze Google Sheet</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('privacy') }}">Privacy Policy</a>
+                            <a class="nav-link" href="{{ url_for('terms_and_conditions') }}">Terms</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('privacy') }}">Privacy</a>
                         </li>
                     </ul>
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0 breadcrumb" style="padding-left: 0.5em">
